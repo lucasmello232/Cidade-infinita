@@ -1,1 +1,49 @@
 
+name: Build Cidade Infinita APK
+
+'on':
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar arquivos
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Android
+        uses: android-actions/setup-android@v3
+
+      - name: Extrair projeto
+        run: |
+          mkdir -p project
+          unzip -q cidade_infinita_android_sem_pc.zip -d project
+          find project -type f -name gradlew -exec chmod +x {} \;
+          find project -type f -name gradlew -print
+
+      - name: Compilar APK
+        run: |
+          GRADLEW="$(find project -type f -name gradlew -print -quit)"
+          if [ -z "$GRADLEW" ]; then
+            echo "O ZIP não contém gradlew. Será necessário corrigir a estrutura do projeto."
+            exit 1
+          fi
+          cd "$(dirname "$GRADLEW")"
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Disponibilizar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cidade-infinita-apk
+          path: project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
